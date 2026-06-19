@@ -1,642 +1,551 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Screen-to-Shorts — Записуєш екран, отримуєш Shorts</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StackShorts — записуєш екран, отримуєш готовий Shorts</title>
+<meta name="description" content="StackShorts перетворює запис екрану на вертикальний Shorts з читабельним кодом і субтитрами. Все на твоєму ПК.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0E14;
+    --bg-elevated: #0F1520;
+    --bg-card: #121927;
+    --border: #1C2433;
+    --text: #F5F7FA;
+    --text-dim: #8A94A6;
+    --text-faint: #5A6472;
+    --cyan: #00E5FF;
+    --cyan-dim: #00E5FF66;
+    --cyan-bg: #00E5FF12;
+  }
 
-    :root {
-      --bg:        #0D0D0D;
-      --surface:   #1A1A1A;
-      --border:    #2A2A2A;
-      --accent:    #00E5FF;
-      --accent-dim:#00E5FF22;
-      --text:      #F0F0F0;
-      --muted:     #888888;
-      --mono:      'JetBrains Mono', monospace;
-      --sans:      'Inter', sans-serif;
-    }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      font-size: 16px;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
 
-    /* NAV */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1rem 2rem;
-      background: rgba(13,13,13,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo {
-      font-family: var(--mono);
-      font-size: 0.95rem;
-      color: var(--accent);
-      letter-spacing: 0.05em;
-    }
-    .nav-cta {
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      color: var(--bg);
-      background: var(--accent);
-      border: none; border-radius: 4px;
-      padding: 0.45rem 1rem;
-      cursor: pointer;
-      text-decoration: none;
-      transition: opacity 0.2s;
-    }
-    .nav-cta:hover { opacity: 0.85; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
 
-    /* HERO */
-    .hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      padding: 6rem 1.5rem 4rem;
-    }
+  a { color: inherit; text-decoration: none; }
 
-    .hero-eyebrow {
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      color: var(--accent);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 1.5rem;
-    }
+  /* ---------- Background grid texture ---------- */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 64px 64px;
+    opacity: 0.35;
+    mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 75%);
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    .hero-terminal {
-      font-family: var(--mono);
-      font-size: clamp(1.6rem, 4vw, 2.8rem);
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 1.5rem;
-      line-height: 1.25;
-    }
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
 
-    .hero-terminal .typed-line {
-      display: block;
-    }
+  /* ---------- Nav ---------- */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(12px);
+    background: rgba(10,14,20,0.75);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 10px; }
+  .logo-wrap svg { height: 28px; width: auto; }
+  .logo-text { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; }
+  .logo-text .accent { color: var(--cyan); }
+  .nav-cta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 8px 16px;
+    border: 1px solid var(--cyan-dim);
+    border-radius: 6px;
+    color: var(--cyan);
+    transition: all 0.2s ease;
+  }
+  .nav-cta:hover { background: var(--cyan-bg); border-color: var(--cyan); }
 
-    .cursor {
-      display: inline-block;
-      width: 2px;
-      height: 1.1em;
-      background: var(--accent);
-      vertical-align: middle;
-      margin-left: 3px;
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 100px 0 80px;
+    text-align: center;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    background: var(--cyan-bg);
+    border: 1px solid var(--cyan-dim);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 32px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    margin-bottom: 24px;
+  }
+  h1 .accent { color: var(--cyan); }
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 19px);
+    color: var(--text-dim);
+    max-width: 620px;
+    margin: 0 auto 40px;
+  }
+  .hero-sub code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.9em;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 64px;
+  }
+  .btn-primary {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 14px 28px;
+    background: var(--cyan);
+    color: #00141A;
+    border-radius: 8px;
+    box-shadow: 0 0 30px var(--cyan-dim);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px var(--cyan-dim); }
+  .btn-secondary {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    padding: 14px 28px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    transition: all 0.15s ease;
+  }
+  .btn-secondary:hover { border-color: var(--text-faint); color: var(--text); }
 
-    .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      color: var(--muted);
-      max-width: 540px;
-      margin: 0 auto 2.5rem;
-    }
+  /* ---------- Pipeline visual (signature element) ---------- */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .stage {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    text-align: left;
+    min-width: 150px;
+  }
+  .stage .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .stage .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .stage.active { border-color: var(--cyan-dim); box-shadow: 0 0 24px -8px var(--cyan-dim); }
+  .stage.active .value { color: var(--cyan); }
+  .arrow {
+    color: var(--text-faint);
+    font-size: 20px;
+    padding: 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+  }
 
-    .hero-sub strong { color: var(--text); }
+  /* ---------- Section shared ---------- */
+  section { padding: 80px 0; }
+  .section-head { text-align: center; max-width: 640px; margin: 0 auto 56px; }
+  .section-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .section-head h2 {
+    font-size: clamp(26px, 4vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .section-head p { color: var(--text-dim); margin-top: 14px; font-size: 16px; }
 
-    .hero-actions {
-      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
-    }
+  /* ---------- Problem cards ---------- */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .problem-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .problem-card .stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--cyan);
+    margin-bottom: 10px;
+  }
+  .problem-card p { color: var(--text-dim); font-size: 14.5px; }
 
-    .btn-primary {
-      font-family: var(--mono);
-      font-size: 0.9rem;
-      background: var(--accent);
-      color: var(--bg);
-      border: none; border-radius: 6px;
-      padding: 0.75rem 1.75rem;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
-      text-decoration: none;
-    }
-    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+  /* ---------- Modes ---------- */
+  .modes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .mode-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-elevated));
+  }
+  .mode-card .mode-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .mode-card h3 { font-size: 18px; margin-bottom: 8px; }
+  .mode-card p { font-size: 14px; color: var(--text-dim); }
 
-    .btn-ghost {
-      font-family: var(--mono);
-      font-size: 0.9rem;
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.75rem 1.75rem;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-      text-decoration: none;
-    }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  /* ---------- Honesty block ---------- */
+  .honest {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px;
+  }
+  .honest-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+  @media (max-width: 720px) { .honest-grid { grid-template-columns: 1fr; } }
+  .honest h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .honest .not h3 { color: #FF6B6B; }
+  .honest .yes h3 { color: var(--cyan); }
+  .honest ul { list-style: none; }
+  .honest li {
+    font-size: 15px;
+    color: var(--text-dim);
+    padding: 8px 0 8px 20px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .honest li:last-child { border-bottom: none; }
+  .honest .not li::before { content: '×'; position: absolute; left: 0; color: #FF6B6B; font-weight: 700; }
+  .honest .yes li::before { content: '✓'; position: absolute; left: 0; color: var(--cyan); font-weight: 700; }
 
-    .hero-stats {
-      display: flex; gap: 2.5rem; flex-wrap: wrap; justify-content: center;
-      margin-top: 3.5rem;
-      padding-top: 2.5rem;
-      border-top: 1px solid var(--border);
-    }
-    .stat { text-align: center; }
-    .stat-num {
-      font-family: var(--mono);
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--accent);
-      display: block;
-    }
-    .stat-label {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
+  /* ---------- Quote ---------- */
+  .quote-block {
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+  .quote-block blockquote {
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .quote-block .by {
+    margin-top: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-faint);
+  }
 
-    /* SECTIONS */
-    section { padding: 5rem 1.5rem; }
-    .container { max-width: 900px; margin: 0 auto; }
+  /* ---------- CTA ---------- */
+  .cta-section {
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  .cta-section h2 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 18px; }
+  .cta-section p { color: var(--text-dim); margin-bottom: 36px; }
 
-    .section-label {
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      color: var(--accent);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 0.75rem;
-    }
-    .section-title {
-      font-size: clamp(1.5rem, 3vw, 2rem);
-      font-weight: 600;
-      margin-bottom: 1rem;
-      line-height: 1.3;
-    }
-    .section-sub {
-      color: var(--muted);
-      max-width: 560px;
-      margin-bottom: 3rem;
-    }
+  .email-form {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 460px;
+    margin: 0 auto;
+  }
+  .email-form input {
+    flex: 1;
+    min-width: 220px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 16px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+  }
+  .email-form input:focus { outline: none; border-color: var(--cyan); }
+  .email-form input::placeholder { color: var(--text-faint); }
 
-    /* PAIN CARDS */
-    .pain-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .pain-card {
-      background: var(--surface);
-      padding: 2rem;
-    }
-    .pain-icon {
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    .pain-title {
-      font-family: var(--mono);
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.5rem;
-    }
-    .pain-desc {
-      font-size: 0.88rem;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-    .pain-desc em {
-      color: var(--text);
-      font-style: normal;
-    }
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    text-align: center;
+  }
+  footer p { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-faint); }
 
-    /* PIPELINE */
-    .pipeline {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin: 2.5rem 0;
-    }
-    .pipe-step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      text-align: center;
-      min-width: 140px;
-    }
-    .pipe-step-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
-    .pipe-step-label {
-      font-family: var(--mono);
-      font-size: 0.78rem;
-      color: var(--text);
-    }
-    .pipe-arrow {
-      font-family: var(--mono);
-      color: var(--accent);
-      font-size: 1.2rem;
-      padding: 0 0.5rem;
-    }
+  /* ---------- Reveal animation ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
 
-    .modes-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-    .mode-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem;
-      transition: border-color 0.2s;
-    }
-    .mode-card:hover { border-color: var(--accent); }
-    .mode-tag {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--accent);
-      background: var(--accent-dim);
-      border-radius: 3px;
-      padding: 0.2rem 0.5rem;
-      display: inline-block;
-      margin-bottom: 0.6rem;
-    }
-    .mode-name {
-      font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: 0.3rem;
-    }
-    .mode-desc { font-size: 0.82rem; color: var(--muted); }
-
-    /* VS TABLE */
-    .vs-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 2rem;
-      font-size: 0.88rem;
-    }
-    .vs-table th {
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      text-align: left;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      font-weight: 400;
-    }
-    .vs-table th.ours { color: var(--accent); }
-    .vs-table td {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-    }
-    .vs-table td:first-child { color: var(--text); }
-    .vs-table td.good { color: var(--accent); }
-    .vs-table tr:last-child td { border-bottom: none; }
-    .vs-table tr:hover td { background: var(--surface); }
-
-    /* EMAIL SECTION */
-    .cta-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 3.5rem 2rem;
-      text-align: center;
-    }
-    .cta-section .section-title { margin-bottom: 0.5rem; }
-    .cta-section .section-sub { margin: 0 auto 2rem; }
-
-    .email-form {
-      display: flex;
-      gap: 0.75rem;
-      max-width: 480px;
-      margin: 0 auto;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .email-input {
-      flex: 1;
-      min-width: 220px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.75rem 1rem;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 0.85rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .email-input::placeholder { color: var(--muted); }
-    .email-input:focus { border-color: var(--accent); }
-
-    .form-note {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 1rem;
-    }
-
-    .success-msg {
-      display: none;
-      font-family: var(--mono);
-      font-size: 0.9rem;
-      color: var(--accent);
-      margin-top: 1rem;
-    }
-
-    /* FOOTER */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 2rem 1.5rem;
-      text-align: center;
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-    footer span { color: var(--accent); }
-
-    /* DIVIDER */
-    .divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 0;
-    }
-
-    @media (max-width: 600px) {
-      .pipeline { gap: 0.5rem; }
-      .pipe-arrow { display: none; }
-      .pipe-step { min-width: 100px; padding: 1rem; }
-      nav { padding: 1rem; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .cursor { animation: none; opacity: 1; }
-    }
-  </style>
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
 </head>
 <body>
 
-<!-- NAV -->
+<div class="grid-bg"></div>
+
 <nav>
-  <span class="nav-logo">screen-to-shorts<span class="cursor"></span></span>
-  <a href="#waitlist" class="nav-cta">Стати бета-тестером</a>
+  <div class="nav-inner">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="30" height="5" rx="2.5" fill="#00E5FF" opacity="0.35"/>
+        <rect x="4" y="17" width="20" height="5" rx="2.5" fill="#00E5FF" opacity="0.5"/>
+        <rect x="10" y="26" width="26" height="20" rx="6" fill="none" stroke="#00E5FF" stroke-width="3"/>
+        <path d="M21 33 L21 39 L27 36 Z" fill="#00E5FF"/>
+      </svg>
+      <span class="logo-text">Stack<span class="accent">Shorts</span></span>
+    </div>
+    <a href="#waitlist" class="nav-cta">приєднатись до валідації</a>
+  </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero">
-  <p class="hero-eyebrow">Для розробників і технічних авторів</p>
-  <h1 class="hero-terminal">
-    <span class="typed-line">Записуєш екран —</span>
-    <span class="typed-line">отримуєш готовий Shorts.</span>
-  </h1>
-  <p class="hero-sub">
-    Все в одному місці, на своєму ПК, без зайвих інструментів.<br>
-    <strong>Офлайн. Локально. Без монтажу.</strong>
-  </p>
-  <div class="hero-actions">
-    <a href="#waitlist" class="btn-primary">Стати бета-тестером →</a>
-    <a href="#how" class="btn-ghost">Як це працює</a>
-  </div>
-  <div class="hero-stats">
-    <div class="stat">
-      <span class="stat-num">72%</span>
-      <span class="stat-label">розробників називають монтаж<br>головним болем *</span>
-    </div>
-    <div class="stat">
-      <span class="stat-num">58%</span>
-      <span class="stat-label">глядачів йдуть через<br>нечитабельний код *</span>
-    </div>
-    <div class="stat">
-      <span class="stat-num">~2 хв</span>
-      <span class="stat-label">замість 40 хвилин<br>в OBS + CapCut</span>
-    </div>
-  </div>
-  <p style="margin-top:1rem;font-size:0.7rem;color:#555;font-family:var(--mono);">* опитування 1200 розробників-авторів, 2026</p>
-</section>
-
-<hr class="divider">
-
-<!-- PAIN -->
-<section>
+<header class="hero">
   <div class="container">
-    <p class="section-label">Проблема</p>
-    <h2 class="section-title">Ти знаєш цей біль</h2>
-    <p class="section-sub">Записати екран — просто. Зробити з цього Shorts який не соромно публікувати — стіна.</p>
+    <div class="eyebrow">в розробці · валідація триває</div>
+    <h1>Записуєш екран — <br>отримуєш готовий <span class="accent">Shorts</span></h1>
+    <p class="hero-sub">
+      StackShorts перетворює запис екрану на читабельний вертикальний відос
+      з субтитрами. Все в одному місці, на твоєму ПК — без <code>OBS</code>,
+      без <code>CapCut</code>, без зайвих кроків.
+    </p>
+    <div class="hero-actions">
+      <a href="#waitlist" class="btn-primary">залишити пошту</a>
+      <a href="#how" class="btn-secondary">як це працює →</a>
+    </div>
 
-    <div class="pain-grid">
-      <div class="pain-card">
-        <div class="pain-icon">⬛</div>
-        <div class="pain-title">Чорні смуги зверху і знизу</div>
-        <p class="pain-desc">Горизонтальний екран 16:9 не вміщується у вертикальний 9:16. Результат виглядає як <em>аматорщина</em> — навіть якщо контент чудовий.</p>
+    <div class="pipeline reveal" id="pipeline">
+      <div class="stage">
+        <div class="label">01 — запис</div>
+        <div class="value">16:9, твій код</div>
       </div>
-      <div class="pain-card">
-        <div class="pain-icon">🔧</div>
-        <div class="pain-title">Два інструменти, 7 кроків</div>
-        <p class="pain-desc">OBS → експорт → CapCut → завантаження → монтаж → субтитри → експорт знову. <em>30-40 хвилин</em> щоб зробити 3-хвилинне відео.</p>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="label">02 — обробка</div>
+        <div class="value">zoom + субтитри</div>
       </div>
-      <div class="pain-card">
-        <div class="pain-icon">🔍</div>
-        <div class="pain-title">Код не видно</div>
-        <p class="pain-desc">58% глядачів закривають відео бо не можуть прочитати код на екрані. Ти витратив годину на запис — <em>вони пішли за 10 секунд.</em></p>
+      <div class="arrow">→</div>
+      <div class="stage active">
+        <div class="label">03 — результат</div>
+        <div class="value">9:16 Shorts</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="problem">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">проблема</div>
+      <h2>Біль — не монтаж. Біль — невпевненість</h2>
+      <p>«Я зробив. Але знав що це погано. І не знав як зробити краще.»</p>
+    </div>
+    <div class="problem-grid reveal">
+      <div class="problem-card">
+        <div class="stat">72%</div>
+        <p>розробників-авторів назвали час на монтаж головним болем при створенні контенту</p>
+      </div>
+      <div class="problem-card">
+        <div class="stat">58%</div>
+        <p>глядачів кидають дивитись, бо код на записаному екрані просто нечитабельний</p>
+      </div>
+      <div class="problem-card">
+        <div class="stat">2</div>
+        <p>інструменти зазвичай потрібні (запис + монтаж), щоб дійти до готового Shorts</p>
       </div>
     </div>
   </div>
 </section>
 
-<hr class="divider">
-
-<!-- HOW -->
 <section id="how">
   <div class="container">
-    <p class="section-label">Рішення</p>
-    <h2 class="section-title">Один пайплайн. Жодного монтажу.</h2>
-    <p class="section-sub">Замість семи кроків у двох програмах — один інструмент який робить все сам.</p>
-
-    <div class="pipeline">
-      <div class="pipe-step">
-        <div class="pipe-step-icon">🎬</div>
-        <div class="pipe-step-label">Обираєш режим</div>
-      </div>
-      <span class="pipe-arrow">→</span>
-      <div class="pipe-step">
-        <div class="pipe-step-icon">⏺</div>
-        <div class="pipe-step-label">Записуєш екран</div>
-      </div>
-      <span class="pipe-arrow">→</span>
-      <div class="pipe-step">
-        <div class="pipe-step-icon">🤖</div>
-        <div class="pipe-step-label">AI обробляє</div>
-      </div>
-      <span class="pipe-arrow">→</span>
-      <div class="pipe-step">
-        <div class="pipe-step-icon">📱</div>
-        <div class="pipe-step-label">Готовий Shorts</div>
-      </div>
+    <div class="section-head reveal">
+      <div class="section-eyebrow">режими запису</div>
+      <h2>Вибір стилю — як вибір режиму камери</h2>
+      <p>Один тап перед записом. Жодних меню з налаштуваннями.</p>
     </div>
-
-    <div class="modes-grid">
+    <div class="modes-grid reveal">
       <div class="mode-card">
-        <span class="mode-tag">АВТО</span>
-        <div class="mode-name">Blurred фон</div>
-        <p class="mode-desc">Розмита версія екрану заповнює 9:16. Виглядає як у топових каналів.</p>
+        <div class="mode-tag">дефолт</div>
+        <h3>Авто</h3>
+        <p>Розмитий фон, авто-стеження за курсором, субтитри без зайвих кліків.</p>
       </div>
       <div class="mode-card">
-        <span class="mode-tag">РОЗДІЛЕНИЙ</span>
-        <div class="mode-name">70/30 лейаут</div>
-        <p class="mode-desc">Екран зверху, камера знизу. Живе обличчя підвищує engagement.</p>
+        <div class="mode-tag">з лицем</div>
+        <h3>Розділений 70/30</h3>
+        <p>Екран зверху, камера знизу — коли хочеш показати реакцію, а не тільки код.</p>
       </div>
       <div class="mode-card">
-        <span class="mode-tag">ФОКУС</span>
-        <div class="mode-name">Code Zoom</div>
-        <p class="mode-desc">Авто-zoom на зону з кодом. Глядачі нарешті бачать що ти пишеш.</p>
+        <div class="mode-tag">для туторіалів</div>
+        <h3>Фокус</h3>
+        <p>Smart zoom за курсором, авто-розпізнавання зони коду — щоб синтаксис було видно на телефоні.</p>
       </div>
       <div class="mode-card">
-        <span class="mode-tag">РАМКА</span>
-        <div class="mode-name">9:16 overlay</div>
-        <p class="mode-desc">Накладає рамку ще до запису. Ти бачиш результат перш ніж натиснути rec.</p>
+        <div class="mode-tag">контроль</div>
+        <h3>Рамка</h3>
+        <p>9:16 overlay ще до запису — для тих, хто любить точно бачити кадр заздалегідь.</p>
       </div>
     </div>
   </div>
 </section>
 
-<hr class="divider">
-
-<!-- VS -->
-<section>
+<section id="honest">
   <div class="container">
-    <p class="section-label">Порівняння</p>
-    <h2 class="section-title">Чому не OBS + CapCut</h2>
-    <p class="section-sub">Вони потужні. Але не для тебе — технічного автора якому треба публікувати регулярно.</p>
-
-    <table class="vs-table">
-      <thead>
-        <tr>
-          <th>Критерій</th>
-          <th>OBS + CapCut</th>
-          <th class="ours">Screen-to-Shorts</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Кількість інструментів</td>
-          <td>2+</td>
-          <td class="good">1</td>
-        </tr>
-        <tr>
-          <td>Час від запису до Shorts</td>
-          <td>30–40 хв</td>
-          <td class="good">~2 хв</td>
-        </tr>
-        <tr>
-          <td>Субтитри українською</td>
-          <td>Погано</td>
-          <td class="good">Нативно</td>
-        </tr>
-        <tr>
-          <td>Приватність даних</td>
-          <td>CapCut десктоп — хмарна обробка</td>
-          <td class="good">Повністю локально</td>
-        </tr>
-        <tr>
-          <td>Live Preview 9:16</td>
-          <td>Немає</td>
-          <td class="good">Є</td>
-        </tr>
-        <tr>
-          <td>Zoom на код</td>
-          <td>Немає</td>
-          <td class="good">Авто-розпізнавання</td>
-        </tr>
-        <tr>
-          <td>Офлайн режим</td>
-          <td>OBS так, CapCut ні</td>
-          <td class="good">Повністю офлайн</td>
-        </tr>
-        <tr>
-          <td>Обробка аудіо</td>
-          <td>Немає нормалізації</td>
-          <td class="good">Шумопригнічення + нормалізація</td>
-        </tr>
-      </tbody>
-    </table>
-    <p style="margin-top:1.25rem;font-size:0.75rem;color:#555;font-family:var(--mono);">
-      Стек: Tauri v2 · Faster-Whisper · FFmpeg · повністю локально на Windows
-    </p>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- CTA -->
-<section id="waitlist">
-  <div class="container">
-    <div class="cta-section">
-      <p class="section-label">Бета-тестування</p>
-      <h2 class="section-title">Шукаємо 10 перших бета-тестерів</h2>
-      <p class="section-sub">Будуємо це зараз. Хочемо 10 реальних розробників які спробують і скажуть що не так. Без спаму — тільки запит на тест коли буде готово.</p>
-
-      <div class="email-form" id="emailForm">
-        <input
-          type="email"
-          class="email-input"
-          id="emailInput"
-          placeholder="твій@email.com"
-          autocomplete="email"
-        >
-        <button class="btn-primary" onclick="handleSubmit()">Хочу спробувати →</button>
+    <div class="section-head reveal">
+      <div class="section-eyebrow">чесно</div>
+      <h2>Для кого це — а для кого ні</h2>
+    </div>
+    <div class="honest reveal">
+      <div class="honest-grid">
+        <div class="not">
+          <h3>Не для тебе, якщо</h3>
+          <ul>
+            <li>Тобі потрібен повноцінний відеоредактор з таймлайном і ефектами</li>
+            <li>Ти знімаєш не код — а подкасти, вебінари чи влоги</li>
+            <li>Хмарне зберігання і командна співпраця важливіші за приватність</li>
+          </ul>
+        </div>
+        <div class="yes">
+          <h3>Для тебе, якщо</h3>
+          <ul>
+            <li>Ти розробник чи технічний автор, що знімає туторіали про код</li>
+            <li>Хочеш від запису до Shorts за хвилини, а не за вечір у CapCut</li>
+            <li>Цінуєш, що все обробляється локально на твоєму ПК</li>
+          </ul>
+        </div>
       </div>
-      <p class="form-note">Тільки повідомлення про запуск. Жодного маркетингу.</p>
-      <p class="success-msg" id="successMsg">✓ Дякуємо. Повідомимо першим.</p>
     </div>
   </div>
 </section>
 
-<!-- FOOTER -->
+<section id="quote">
+  <div class="container">
+    <div class="quote-block reveal">
+      <blockquote>«Записуєш екран — отримуєш готовий Shorts. Все в одному місці, на своєму ПК, без зайвих інструментів.»</blockquote>
+      <div class="by">— з реальних слів першого користувача на валідації</div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section" id="waitlist">
+  <div class="container">
+    <div class="reveal">
+      <h2>Хочеш спробувати першим?</h2>
+      <p>Продукт у валідації. Раннім учасникам — перший доступ і вплив на фічі MVP.</p>
+      <form class="email-form" onsubmit="event.preventDefault(); this.querySelector('input').value=''; this.querySelector('button').textContent='дякую, на звʼязку →';">
+        <input type="email" placeholder="твоя_пошта@example.com" required>
+        <button type="submit" class="btn-primary" style="border:none; cursor:pointer;">приєднатись</button>
+      </form>
+    </div>
+  </div>
+</section>
+
 <footer>
-  <p>Screen-to-Shorts · 2026 · Зроблено для тих хто <span>пише код</span> і хоче ним ділитись</p>
+  <p>StackShorts © 2026 · record → readable → vertical</p>
 </footer>
 
 <script>
-  function handleSubmit() {
-    const input = document.getElementById('emailInput');
-    const success = document.getElementById('successMsg');
-    const form = document.getElementById('emailForm');
-    const note = document.querySelector('.form-note');
-
-    const email = input.value.trim();
-    if (!email || !email.includes('@')) {
-      input.style.borderColor = '#ff4444';
-      input.focus();
-      setTimeout(() => { input.style.borderColor = ''; }, 1500);
-      return;
-    }
-
-    // Store locally for now
-    const emails = JSON.parse(localStorage.getItem('waitlist') || '[]');
-    emails.push({ email, date: new Date().toISOString() });
-    localStorage.setItem('waitlist', JSON.stringify(emails));
-
-    form.style.display = 'none';
-    note.style.display = 'none';
-    success.style.display = 'block';
-  }
-
-  document.getElementById('emailInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') handleSubmit();
-  });
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
 
 </body>
